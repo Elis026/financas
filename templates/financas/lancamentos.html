@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load dinheiro %}
+{% block titulo %}Lançamentos{% endblock %}
+{% block topo_meio %}{% include "financas/_seletor_mes.html" %}{% endblock %}
+
+{% block conteudo %}
+<div class="kpis" style="margin-bottom:20px">
+  <div class="card kpi"><div class="rotulo">Receitas (filtro)</div><div class="valor num pos">{{ total_receitas|brl }}</div></div>
+  <div class="card kpi"><div class="rotulo">Despesas (filtro)</div><div class="valor num">{{ total_despesas|brl }}</div></div>
+  <div class="card kpi"><div class="rotulo">Diferença</div><div class="valor num {% if diferenca < 0 %}neg{% endif %}">{{ diferenca|brl }}</div></div>
+  <div class="card kpi"><div class="rotulo">Lançamentos</div><div class="valor num">{{ lancamentos|length }}</div></div>
+</div>
+
+<section class="card">
+  <div class="card-topo">
+    <h2>Lançamentos de {{ mes_nome }}</h2>
+    <div class="acoes">
+      <a class="btn btn-peq" href="{% url 'lancamento_novo' %}?tipo=RECEITA">+ Receita</a>
+      <a class="btn btn-peq" href="{% url 'lancamento_novo' %}?tipo=DESPESA&natureza=FIXA">+ Despesa fixa</a>
+      <a class="btn btn-peq btn-primaria" href="{% url 'lancamento_novo' %}?tipo=DESPESA&natureza=VARIAVEL">+ Despesa variável</a>
+      <a class="btn btn-peq" href="{% url 'exportar' %}?mes={{ mes_param }}">Exportar planilha</a>
+    </div>
+  </div>
+
+  <form class="filtros" method="get">
+    <input type="hidden" name="mes" value="{{ mes_param }}">
+    <input class="input" type="search" name="q" value="{{ filtros.q }}" placeholder="Buscar descrição">
+    <select class="input" name="tipo">
+      <option value="">Receitas e despesas</option>
+      <option value="RECEITA" {% if filtros.tipo == "RECEITA" %}selected{% endif %}>Só receitas</option>
+      <option value="DESPESA" {% if filtros.tipo == "DESPESA" %}selected{% endif %}>Só despesas</option>
+    </select>
+    <select class="input" name="natureza">
+      <option value="">Fixas e variáveis</option>
+      <option value="FIXA" {% if filtros.natureza == "FIXA" %}selected{% endif %}>Só fixas</option>
+      <option value="VARIAVEL" {% if filtros.natureza == "VARIAVEL" %}selected{% endif %}>Só variáveis</option>
+    </select>
+    <select class="input" name="cartao">
+      <option value="">Todos os cartões</option>
+      <option value="nenhum" {% if filtros.cartao == "nenhum" %}selected{% endif %}>Dinheiro / Pix</option>
+      {% for c in cartoes %}<option value="{{ c.pk }}" {% if filtros.cartao == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.nome }}</option>{% endfor %}
+    </select>
+    <select class="input" name="categoria">
+      <option value="">Todas as categorias</option>
+      {% for c in categorias %}<option value="{{ c.pk }}" {% if filtros.categoria == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.nome }}</option>{% endfor %}
+    </select>
+    <select class="input" name="status">
+      <option value="">Pagos e pendentes</option>
+      <option value="pago" {% if filtros.status == "pago" %}selected{% endif %}>Pagos</option>
+      <option value="pendente" {% if filtros.status == "pendente" %}selected{% endif %}>Pendentes</option>
+    </select>
+    <button class="btn btn-secundaria">Filtrar</button>
+    <a class="btn" href="?mes={{ mes_param }}">Limpar</a>
+  </form>
+
+  <div class="tabela-wrap">
+  <table class="tabela">
+    <thead><tr>
+      <th>Data</th><th>Descrição</th><th>Categoria</th><th>Cartão</th><th>Tipo</th><th class="direita">Valor</th><th>Status</th><th></th>
+    </tr></thead>
+    <tbody>
+    {% for l in lancamentos %}
+      <tr>
+        <td class="num">{{ l.data|date:"d/m/Y" }}</td>
+        <td>
+          <div style="font-weight:500">{{ l.descricao }}</div>
+          <div class="fraco">
+            {% if l.rotulo_parcela %}Parcela {{ l.rotulo_parcela }}{% elif l.recorrencia_id %}Recorrente{% endif %}
+          </div>
+        </td>
+        <td><span class="bolinha" style="display:inline-block;background: {{ l.categoria.cor|default:'#9E9E9E' }}"></span> {{ l.categoria.nome|default:"—" }}</td>
+        <td>{{ l.cartao.nome|default:"Dinheiro/Pix" }}</td>
+        <td>
+          {% if l.is_despesa %}<span class="selo {% if l.natureza == 'FIXA' %}fixa{% else %}variavel{% endif %}">{{ l.get_natureza_display }}</span>
+          {% else %}<span class="selo receita">Receita</span>{% endif %}
+        </td>
+        <td class="direita num {% if not l.is_despesa %}pos{% endif %}">{% if l.is_despesa %}- {% else %}+ {% endif %}{{ l.valor|brl }}</td>
+        <td>
+          <form method="post" action="{% url 'lancamento_pago' l.pk %}">{% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="status-btn" title="Clique para alternar">
+              {% if l.pago %}<span class="status pago">{% if l.is_despesa %}Pago{% else %}Recebido{% endif %}</span>
+              {% else %}<span class="status pendente">Pendente</span>{% endif %}
+            </button>
+          </form>
+        </td>
+        <td class="direita" style="white-space:nowrap">
+          <a class="btn btn-peq" href="{% url 'lancamento_editar' l.pk %}?next={{ request.get_full_path|urlencode }}">Editar</a>
+          <a class="btn btn-peq" href="{% url 'lancamento_excluir' l.pk %}?next={{ request.get_full_path|urlencode }}">Excluir</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="8" class="vazio">Nada encontrado para {{ mes_nome }}.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

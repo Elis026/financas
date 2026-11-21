@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block titulo %}{% if novo %}Novo lançamento{% else %}Editar lançamento{% endif %}{% endblock %}
+
+{% block conteudo %}
+<section class="card" style="max-width: 760px; margin: 0 auto">
+  <div class="card-topo">
+    <h1>{% if novo %}Novo lançamento{% else %}Editar lançamento{% endif %}</h1>
+    {% if lanc.rotulo_parcela %}<span class="selo">Parcela {{ lanc.rotulo_parcela }}</span>{% endif %}
+    {% if lanc.recorrencia_id %}<span class="selo fixa">Recorrente</span>{% endif %}
+  </div>
+  {% if not novo and lanc.recorrencia_id %}
+    <p class="muted">Esta edição vale só para este mês. Para mudar todos os meses, <a href="{% url 'recorrencia_editar' lanc.recorrencia_id %}" style="color:var(--secundaria)">edite a conta recorrente</a>.</p>
+  {% endif %}
+
+  <form method="post" novalidate id="form-lancamento">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <div class="campo" style="margin-bottom:18px">
+      <label>Tipo</label>
+      <div class="segmentado">
+        {% for op in form.tipo %}<label>{{ op.tag }}<span>{{ op.choice_label }}</span></label>{% endfor %}
+      </div>
+    </div>
+
+    <div class="campo" id="bloco-natureza" style="margin-bottom:18px">
+      <label>Natureza da despesa</label>
+      <div class="segmentado sec">
+        {% for op in form.natureza %}<label>{{ op.tag }}<span>{{ op.choice_label }}</span></label>{% endfor %}
+      </div>
+      <span class="ajuda">Fixa: valor previsível todo mês (aluguel, internet). Variável: muda conforme o uso (mercado, lazer).</span>
+    </div>
+
+    <div class="form-grade">
+      {% include "financas/_campo.html" with campo=form.descricao largo=True %}
+      {% include "financas/_campo.html" with campo=form.valor %}
+      {% include "financas/_campo.html" with campo=form.data %}
+      {% include "financas/_campo.html" with campo=form.categoria %}
+      {% include "financas/_campo.html" with campo=form.cartao %}
+
+      {% if form.forma %}
+      <div class="campo largo">
+        <label>Como é cobrado?</label>
+        <div class="segmentado">
+          {% for op in form.forma %}<label>{{ op.tag }}<span>{{ op.choice_label }}</span></label>{% endfor %}
+        </div>
+        {% for e in form.forma.errors %}<span class="erro">{{ e }}</span>{% endfor %}
+      </div>
+      <div id="bloco-parcelas" class="form-grade largo campo" style="grid-column: 1 / -1">
+        {% include "financas/_campo.html" with campo=form.num_parcelas %}
+        {% include "financas/_campo.html" with campo=form.valor_e_total %}
+        <p class="ajuda largo" id="previa-parcelas" style="grid-column:1/-1;margin:0"></p>
+      </div>
+      <p class="ajuda largo" id="ajuda-recorrente" style="grid-column:1/-1;margin:0">
+        A conta será lançada automaticamente todo mês a partir desta data, até você encerrar em “Fixas e parceladas”.
+      </p>
+      {% endif %}
+
+      {% include "financas/_campo.html" with campo=form.pago largo=True %}
+      {% include "financas/_campo.html" with campo=form.observacao largo=True %}
+    </div>
+
+    <div class="acoes" style="margin-top:24px">
+      <button class="btn btn-primaria" type="submit">Salvar</button>
+      {% if novo %}<button class="btn" type="submit" name="salvar_e_novo">Salvar e adicionar outro</button>{% endif %}
+      <a class="btn" href="{{ request.GET.next|default:'/lancamentos/' }}">Cancelar</a>
+      <input type="hidden" name="next" value="{{ request.GET.next }}">
+    </div>
+  </form>
+</section>
+{{ categorias_tipo_json|json_script:"categorias-tipo" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const form = document.getElementById("form-lancamento");
+  const valor = (nome) => (form.querySelector(`[name="${nome}"]:checked`) || form.querySelector(`[name="${nome}"]`) || {}).value;
+  const raw = JSON.parse(document.getElementById("categorias-tipo").textContent);
+  const tiposCategoria = typeof raw === "string" ? JSON.parse(raw) : raw;
+  const brl = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  function atualizar() {
+    const tipo = valor("tipo");
+    const forma = valor("forma");
+    document.getElementById("bloco-natureza").classList.toggle("escondido", tipo !== "DESPESA");
+    const parcelas = document.getElementById("bloco-parcelas");
+    if (parcelas) parcelas.classList.toggle("escondido", forma !== "PARCELADA");
+    const rec = document.getElementById("ajuda-recorrente");
+    if (rec) rec.classList.toggle("escondido", forma !== "RECORRENTE");
+
+    // mostra só as categorias do tipo escolhido
+    const sel = form.querySelector('[name="categoria"]');
+    [...sel.options].forEach((o) => {
+      if (!o.value) return;
+      o.hidden = tiposCategoria[o.value] !== tipo;
+      if (o.hidden && o.selected) sel.value = "";
+    });
+
+    // prévia das parcelas
+    const previa = document.getElementById("previa-parcelas");
+    if (previa && forma === "PARCELADA") {
+      const n = parseInt(valor("num_parcelas")) || 0;
+      const v = parseFloat(valor("valor")) || 0;
+      const ehTotal = valor("valor_e_total") !== "0";
+      if (n > 1 && v > 0) {
+        const parcela = ehTotal ? v / n : v, total = ehTotal ? v : v * n;
+        previa.textContent = `${n}x de ${brl(parcela)} — total ${brl(total)}. Cada parcela cai em um mês, a partir do mês da fatura.`;
+      } else previa.textContent = "";
+    }
+  }
+  form.addEventListener("input", atualizar);
+  form.addEventListener("change", atualizar);
+  atualizar();
+})();
+</script>
+{% endblock %}

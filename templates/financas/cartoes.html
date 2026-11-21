@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load dinheiro %}
+{% block titulo %}Cartões{% endblock %}
+{% block topo_meio %}{% include "financas/_seletor_mes.html" %}{% endblock %}
+
+{% block conteudo %}
+<div class="card-topo">
+  <h1>Cartões e contas</h1>
+  <a class="btn btn-primaria" href="{% url 'cartao_novo' %}">+ Novo cartão</a>
+</div>
+
+<div class="grade" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr))">
+{% for item in itens %}
+  {% with c=item.cartao r=item.resumo %}
+  <section class="card" {% if not c.ativo %}style="opacity:.6"{% endif %}>
+    <div class="cc" style="--cc-cor: {{ c.cor }}; --cc-texto: {{ c.cor_texto }}; margin-bottom:16px">
+      <div class="cc-rodape" style="align-items:center"><span class="cc-nome">{{ c.nome }}{% if not c.ativo %} (inativo){% endif %}</span><span class="cc-chip"></span></div>
+      <div><div class="cc-num">•••• {{ c.final|default:"----" }}</div><div class="cc-valor">{{ r.despesas|brl }}</div></div>
+      <div class="cc-rodape"><span>{{ c.get_tipo_display }}</span><strong>{{ c.bandeira|upper }}</strong></div>
+    </div>
+    <div class="cat-linha"><span class="nome muted">Fatura / gasto em {{ mes_nome }}</span><strong class="num">{{ r.despesas|brl }}</strong></div>
+    <div class="cat-linha"><span class="nome muted">Fixas · Variáveis</span><span class="num">{{ r.fixas|brl }} · {{ r.variaveis|brl }}</span></div>
+    <div class="cat-linha"><span class="nome muted">Pendente</span><span class="num" style="color:var(--aviso)">{{ r.pendentes|brl }}</span></div>
+    {% if c.dia_fechamento or c.dia_vencimento %}
+      <div class="cat-linha"><span class="nome muted">Fecha · Vence</span><span>dia {{ c.dia_fechamento|default:"—" }} · dia {{ c.dia_vencimento|default:"—" }}</span></div>
+    {% endif %}
+    {% if r.limite %}
+      <div class="fraco" style="margin-top:8px">Limite usado: {{ r.limite.usado|brl }} de {{ r.limite.limite|brl }}</div>
+      <div class="barra {% if r.limite.pct > 85 %}alerta{% endif %}" style="margin-top:6px"><span style="width: {{ r.limite.pct|limitar|floatformat:0 }}%"></span></div>
+    {% endif %}
+    <div class="acoes" style="margin-top:16px">
+      <a class="btn btn-peq btn-secundaria" href="{% url 'dashboard' %}?mes={{ mes_param }}&cartao={{ c.pk }}">Dashboard</a>
+      <a class="btn btn-peq" href="{% url 'lancamento_novo' %}?cartao={{ c.pk }}">+ Compra</a>
+      <a class="btn btn-peq" href="{% url 'cartao_editar' c.pk %}">Editar</a>
+    </div>
+  </section>
+  {% endwith %}
+{% empty %}
+  <section class="card vazio">
+    <p>Você ainda não cadastrou cartões.</p>
+    <a class="btn btn-primaria" href="{% url 'cartao_novo' %}">Cadastrar o primeiro</a>
+  </section>
+{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% load dinheiro %}
+{% block titulo %}Dashboard{% endblock %}
+{% block topo_meio %}{% include "financas/_seletor_mes.html" %}{% endblock %}
+
+{% block conteudo %}
+<div class="grade dash">
+
+  <!-- Cartões + transações recentes -->
+  <section class="card area-cartoes">
+    <div class="cartoes-linha">
+      <div>
+        <div class="card-topo">
+          <h2>Meus cartões</h2>
+          <a class="btn btn-peq" href="{% url 'cartao_novo' %}">+ Cartão</a>
+        </div>
+        <div class="carteira">
+          {% if cartao_atual %}{% include "financas/_cc.html" with geral=True total=resumo_geral_despesas frente=False %}{% endif %}
+          {% for g in pilha %}{% include "financas/_cc.html" with g=g frente=False geral=False %}{% endfor %}
+          {% if frente %}{% include "financas/_cc.html" with g=frente frente=True geral=False %}
+          {% elif cartoes %}{% include "financas/_cc.html" with geral=True total=resumo.despesas frente=True %}
+          {% else %}
+          <a href="{% url 'cartao_novo' %}" class="cc frente" style="--cc-cor:#B9B6C3; --cc-texto:#1B1B1F">
+            <div class="cc-linha"><span class="cc-nome">Nenhum cartão ainda</span></div>
+            <div class="cc-corpo"><div class="cc-valor">Cadastre o primeiro</div></div>
+            <div class="cc-linha"><span>+ Novo cartão</span></div>
+          </a>
+          {% endif %}
+        </div>
+        <p class="fraco" style="margin:8px 0 0">Clique em um cartão para ver o dashboard dele.</p>
+        {% if cartao_atual and resumo.limite %}
+          <div style="margin-top:6px">
+            <div style="display:flex;justify-content:space-between" class="fraco">
+              <span>Limite usado {{ resumo.limite.usado|brl }} de {{ resumo.limite.limite|brl }}</span>
+              <span>Disponível {{ resumo.limite.disponivel|brl }}</span>
+            </div>
+            <div class="barra {% if resumo.limite.pct > 85 %}alerta{% endif %}" style="margin-top:6px"><span style="width: {{ resumo.limite.pct|limitar|floatformat:0 }}%"></span></div>
+          </div>
+        {% endif %}
+        {% if cartao_atual and resumo.pendentes %}
+          <form method="post" action="{% url 'fatura_pagar' cartao_atual.pk %}?mes={{ mes_param }}" style="margin-top:12px">{% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="btn btn-peq btn-secundaria">Marcar fatura de {{ mes_nome }} como paga ({{ resumo.pendentes|brl }})</button>
+          </form>
+        {% endif %}
+      </div>
+
+      <div>
+        <div class="card-topo">
+          <h3 class="muted">Transações recentes</h3>
+          <a class="btn btn-peq" href="{% url 'lancamentos' %}?mes={{ mes_param }}{% if cartao_atual %}&cartao={{ cartao_atual.pk }}{% endif %}">Ver todas</a>
+        </div>
+        <ul class="lista">
+          {% for l in recentes %}
+          <li>
+            <span class="ic" style="color: {{ l.categoria.cor|default:'#9E9E9E' }}">
+              {% if l.is_despesa %}<svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg>
+              {% else %}<svg viewBox="0 0 24 24"><path d="M17 7L7 17M15 17H7V9"/></svg>{% endif %}
+            </span>
+            <div class="info">
+              <div class="titulo">{{ l.descricao }} {% if l.rotulo_parcela %}<span class="fraco">{{ l.rotulo_parcela }}</span>{% endif %}</div>
+              <div class="fraco">{{ l.categoria.nome|default:"Sem categoria" }} · {{ l.cartao.nome|default:"Dinheiro/Pix" }}</div>
+            </div>
+            <div class="valor">
+              <div class="num {% if l.is_despesa %}{% else %}pos{% endif %}">{% if l.is_despesa %}- {% else %}+ {% endif %}{{ l.valor|brl }}</div>
+              <div class="fraco">{{ l.data|date:"d/m" }}</div>
+            </div>
+          </li>
+          {% empty %}
+          <li class="vazio" style="display:block">Nenhum lançamento neste mês.<br><a class="btn btn-peq btn-primaria" style="margin-top:10px" href="{% url 'lancamento_novo' %}">Adicionar</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- KPIs -->
+  <section class="kpis area-kpis">
+    <div class="card kpi">
+      <div class="rotulo">Receitas</div>
+      <div class="valor num pos">{{ resumo.receitas|brl }}</div>
+      <div class="det">no mês</div>
+    </div>
+    <div class="card kpi">
+      <div class="rotulo">Despesas fixas</div>
+      <div class="valor num">{{ resumo.fixas|brl }}</div>
+      <div class="det">aluguel, contas, assinaturas</div>
+    </div>
+    <div class="card kpi">
+      <div class="rotulo">Despesas variáveis</div>
+      <div class="valor num">{{ resumo.variaveis|brl }}</div>
+      <div class="det">compras do dia a dia</div>
+    </div>
+    <div class="card kpi">
+      <div class="rotulo">A pagar</div>
+      <div class="valor num" style="color: var(--aviso)">{{ resumo.pendentes|brl }}</div>
+      <div class="det">ainda não marcado como pago</div>
+    </div>
+  </section>
+
+  <!-- Saldo + categorias -->
+  <section class="card area-saldo">
+    <div class="card-topo"><h2>{% if cartao_atual %}{{ cartao_atual.nome }}{% else %}Resumo do mês{% endif %}</h2></div>
+    {% with p=resumo.pct_gasto %}
+    <div class="anel {% if p > 100 %}alerta{% endif %}" {% if cor_destaque %}style="--anel-cor: {{ cor_destaque }}"{% endif %}>
+      <svg viewBox="0 0 120 120"><circle class="trilho" cx="60" cy="60" r="52"/><circle class="progresso" cx="60" cy="60" r="52" stroke-dasharray="326.7" style="stroke-dashoffset: {{ anel_offset|stringformat:'s' }}"/></svg>
+      <div class="anel-centro">
+        <strong>{{ p|floatformat:0 }}%</strong>
+        <span class="fraco">da receita gasta</span>
+        <span class="fraco num">{{ resumo.despesas|brl }}<br>de {{ resumo.receitas|brl }}</span>
+      </div>
+    </div>
+    {% endwith %}
+    <div class="saldo-valor num {% if resumo.saldo < 0 %}neg{% endif %}">{{ resumo.saldo|brl }}</div>
+    <div class="muted" style="text-align:center">Saldo do mês</div>
+
+    {% if resumo.por_categoria %}
+    <div class="barra-cats">
+      {% for c in resumo.por_categoria %}<span style="width: {{ c.pct|stringformat:'f' }}%; background: {{ c.cor }}" title="{{ c.nome }}"></span>{% endfor %}
+    </div>
+    {% for c in resumo.por_categoria %}
+      <div class="cat-linha">
+        <span class="bolinha" style="background: {{ c.cor }}"></span>
+        <span class="nome">{{ c.nome }}{% if c.estourou %} <span class="tag-estouro">acima do teto</span>{% endif %}</span>
+        <span class="num">- {{ c.total|brl }}</span>
+      </div>
+    {% endfor %}
+    {% else %}
+      <p class="vazio">Sem despesas neste mês.</p>
+    {% endif %}
+    <div class="acoes" style="margin-top:18px">
+      <a class="btn btn-peq" href="{% url 'exportar' %}?mes={{ mes_param }}">Planilha do mês</a>
+      <a class="btn btn-peq" href="{% url 'exportar' %}?ano={{ mes.year }}">Planilha de {{ mes.year }}</a>
+    </div>
+  </section>
+
+  <!-- Metas (teto por categoria) -->
+  <section class="card area-metas" id="metas">
+    <div class="card-topo">
+      <div>
+        <h2>Metas do mês</h2>
+        {% if metas.total %}
+        <p class="fraco" style="margin:2px 0 0">{% if cartao_atual %}Somando todos os cartões · {% endif %}
+          {% if metas.mes_encerrado %}{{ metas.cumpridas }} de {{ metas.total }} metas cumpridas em {{ mes_nome }}
+          {% else %}{{ metas.cumpridas }} de {{ metas.total }} dentro do teto até agora{% endif %}
+        </p>
+        {% endif %}
+      </div>
+      <a class="btn btn-peq" href="{% url 'categorias' %}">Definir tetos</a>
+    </div>
+    {% if metas.total %}
+    <div class="metas">
+      {% for m in metas.itens %}
+      <div class="meta meta-{{ m.status }}">
+        <div class="meta-topo">
+          <span class="nome"><span class="bolinha" style="background: {{ m.categoria.cor }}"></span> {{ m.categoria.nome }}</span>
+          <span class="meta-selo">{% if m.status == "ok" %}✓ {% elif m.status == "estourou" %}✕ {% else %}! {% endif %}{{ m.rotulo }}</span>
+        </div>
+        <div class="meta-valores"><strong class="num">{{ m.gasto|brl }}</strong> <span class="fraco num">de {{ m.teto|brl }}</span></div>
+        <div class="meta-barra" title="{{ m.pct }}% do teto">
+          <span style="width: {{ m.pct|limitar|stringformat:'f' }}%"></span>
+          <i style="left: {{ m.categoria.alerta_pct }}%" title="Aviso em {{ m.categoria.alerta_pct }}%"></i>
+        </div>
+        <div class="fraco">
+          {% if m.restante >= 0 %}Restam {{ m.restante|brl }} · {{ m.pct|floatformat:0 }}%
+          {% else %}Passou {{ m.restante|brl|cut:"-" }} do teto · {{ m.pct|floatformat:0 }}%{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="vazio" style="padding:18px">
+      Nenhuma meta ainda. Defina um teto mensal numa categoria (ex.: R$ 100 para “Alimentação”)
+      e acompanhe aqui se está dentro da meta.
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- Gráficos -->
+  <section class="card area-atividade">
+    <div class="card-topo"><h2>Gastos por dia da compra</h2><span class="fraco">{% if cartao_atual %}{{ cartao_atual.nome }} · {% endif %}{{ mes_nome }}</span></div>
+    <div class="grafico"><canvas id="grafico-dia"></canvas></div>
+  </section>
+  <section class="card area-pagamentos">
+    <div class="card-topo"><h2>Últimos 6 meses</h2><span class="fraco">{% if cartao_atual %}{{ cartao_atual.nome }}{% else %}despesas por cartão × receitas{% endif %}</span></div>
+    <div class="grafico"><canvas id="grafico-meses"></canvas></div>
+  </section>
+</div>
+{{ graficos_json|json_script:"dados-graficos" }}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function () {
+  const raw = JSON.parse(document.getElementById("dados-graficos").textContent);
+  const dados = typeof raw === "string" ? JSON.parse(raw) : raw;
+
+  if (!window.Chart) return;
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const brl = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  let graficos = [];
+
+  function desenhar() {
+    graficos.forEach((g) => g.destroy());
+    graficos = [];
+    Chart.defaults.font.family = "Poppins, system-ui, sans-serif";
+    Chart.defaults.color = css("--texto-3");
+    const grade = css("--borda");
+    const series = dados.series;
+    const legenda = { display: dados.porCartao, position: "bottom", labels: { boxWidth: 10, usePointStyle: true } };
+    const dica = { callbacks: { label: (c) => " " + c.dataset.label + ": " + brl(c.parsed.y) } };
+    const eixos = (empilhar) => ({
+      x: { stacked: empilhar, grid: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 8 } },
+      y: { stacked: empilhar, grid: { color: grade }, border: { display: false }, ticks: { callback: (v) => "R$ " + v } },
+    });
+    const base = { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: "index" } };
+
+    // Gastos por dia da compra: barras na cor de cada cartão (empilhadas na visão geral)
+    graficos.push(new Chart(document.getElementById("grafico-dia"), {
+      type: "bar",
+      data: { labels: dados.dias, datasets: series.map((s) => ({ label: s.nome, data: s.dia, backgroundColor: s.cor, borderRadius: 4, maxBarThickness: 16 })) },
+      options: { ...base, plugins: { legend: legenda, tooltip: { ...dica, filter: (i) => i.parsed.y > 0 } }, scales: eixos(true) },
+    }));
+
+    // Últimos 6 meses: despesas empilhadas por cartão (+ receitas ao lado na visão geral)
+    const ultimo = dados.meses.length - 1;
+    const conjuntos = series.map((s) => ({
+      label: s.nome, data: s.mes, stack: "despesas", borderRadius: 6, maxBarThickness: 30,
+      backgroundColor: dados.porCartao ? s.cor : s.mes.map((_, i) => (i === ultimo ? s.cor : s.cor + "66")),
+    }));
+    if (dados.porCartao) {
+      conjuntos.push({ label: "Receitas", data: dados.receitasMes, stack: "receitas", borderRadius: 6, maxBarThickness: 30,
+        backgroundColor: "transparent", borderColor: css("--verde"), borderWidth: 2, borderSkipped: false });
+    }
+    graficos.push(new Chart(document.getElementById("grafico-meses"), {
+      type: "bar",
+      data: { labels: dados.meses, datasets: conjuntos },
+      options: { ...base, plugins: { legend: legenda, tooltip: { ...dica, filter: (i) => i.parsed.y > 0 } }, scales: eixos(true) },
+    }));
+  }
+  desenhar();
+  window.addEventListener("tema-alterado", desenhar);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", desenhar);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titulo %}Confirmar{% endblock %}
+{% block conteudo %}
+<section class="card" style="max-width: 520px; margin: 0 auto">
+  <h1>{{ titulo }}</h1>
+  <p class="muted">{{ texto }}</p>
+  <form method="post" class="acoes">{% csrf_token %}
+    <button class="btn btn-perigo">Confirmar</button>
+    <a class="btn" href="{% url voltar_url %}">Cancelar</a>
+  </form>
+</section>
+{% endblock %}

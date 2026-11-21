@@ -1,0 +1,5 @@
+{% load dinheiro %}<div class="pilulas">
+  <a class="seta" href="{% qs mes=mes_anterior %}" title="Mês anterior" aria-label="Mês anterior"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
+  <span class="mes-atual">{{ mes_nome }}</span>
+  <a class="seta" href="{% qs mes=mes_seguinte %}" title="Próximo mês" aria-label="Próximo mês"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></a>
+</div>

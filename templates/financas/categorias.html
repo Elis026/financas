@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load dinheiro %}
+{% block titulo %}Categorias{% endblock %}
+
+{% block conteudo %}
+<section class="card" style="max-width: 820px; margin: 0 auto">
+  <div class="card-topo">
+    <h1>Categorias</h1>
+    <a class="btn btn-primaria" href="{% url 'categoria_nova' %}">+ Nova categoria</a>
+  </div>
+  <p class="muted">Defina um <strong>teto mensal</strong> nas categorias de despesa (ex.: R$ 100 em Alimentação). O dashboard mostra se você está cumprindo a meta e você recebe um aviso quando chegar perto do limite.</p>
+  <div class="tabela-wrap">
+  <table class="tabela">
+    <thead><tr><th>Nome</th><th>Tipo</th><th class="direita">Teto mensal (meta)</th><th class="direita">Aviso em</th><th></th></tr></thead>
+    <tbody>
+    {% for c in categorias %}
+      <tr>
+        <td><span class="bolinha" style="display:inline-block;background: {{ c.cor }}"></span> {{ c.nome }}</td>
+        <td><span class="selo {% if c.tipo == 'RECEITA' %}receita{% else %}variavel{% endif %}">{{ c.get_tipo_display }}</span></td>
+        <td class="direita num">{% if c.orcamento_mensal %}{{ c.orcamento_mensal|brl }}{% else %}<span class="fraco">—</span>{% endif %}</td>
+        <td class="direita">{% if c.orcamento_mensal %}{{ c.alerta_pct }}%{% else %}<span class="fraco">—</span>{% endif %}</td>
+        <td class="direita"><a class="btn btn-peq" href="{% url 'categoria_editar' c.pk %}">Editar</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

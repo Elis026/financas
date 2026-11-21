@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titulo %}Criar conta{% endblock %}
+{% block publico %}
+<div class="tela-login">
+  <div class="caixa-login">
+    <span class="marca">Finanças</span>
+    <section class="card">
+      <h2 style="margin-bottom:16px">Criar conta</h2>
+      <form method="post">{% csrf_token %}
+        {% for campo in form %}
+          <div class="campo" style="margin-bottom:14px">
+            <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+            {{ campo }}
+            {% for e in campo.errors %}<span class="erro">{{ e }}</span>{% endfor %}
+          </div>
+        {% endfor %}
+        <button class="btn btn-primaria" style="width:100%">Criar conta</button>
+      </form>
+      <p class="muted" style="text-align:center;margin:16px 0 0">Já tem conta? <a href="{% url 'login' %}" style="color:var(--secundaria);font-weight:500">Entrar</a></p>
+    </section>
+  </div>
+</div>
+{% endblock %}

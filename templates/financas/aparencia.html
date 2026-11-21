@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block titulo %}Aparência{% endblock %}
+
+{% block conteudo %}
+<section class="card" style="max-width: 1040px; margin: 0 auto">
+  <div class="card-topo">
+    <div>
+      <h1>Aparência</h1>
+      <p class="muted" style="margin:4px 0 0">Escolha a combinação de cores do sistema. Passe o mouse sobre uma paleta para ver a prévia na página inteira.</p>
+    </div>
+    <button class="btn" type="button" id="alternar-tema-2">Alternar claro / escuro</button>
+  </div>
+
+  <div class="paletas">
+    {% for p in paletas %}
+    <form method="post" class="paleta {% if p.atual %}atual{% endif %}" data-paleta="{{ p.valor }}"
+          style="--p1: {{ p.primaria }}; --p2: {{ p.secundaria }}">
+      {% csrf_token %}
+      <input type="hidden" name="paleta" value="{{ p.valor }}">
+      <div class="paleta-previa" aria-hidden="true">
+        <span class="pv-lateral"><i></i><i></i><i></i></span>
+        <span class="pv-corpo">
+          <span class="pv-topo"><b class="pv-botao"></b></span>
+          <span class="pv-linha">
+            <span class="pv-anel"></span>
+            <span class="pv-barras"><i style="height:45%"></i><i style="height:70%"></i><i style="height:55%"></i><i class="forte" style="height:90%"></i></span>
+          </span>
+        </span>
+      </div>
+      <div class="paleta-info">
+        <div>
+          <strong>{{ p.nome }}</strong>
+          <div class="fraco">{{ p.detalhe }}</div>
+        </div>
+        <span class="amostras"><i style="background: {{ p.primaria }}"></i><i style="background: {{ p.secundaria }}"></i></span>
+      </div>
+      {% if p.atual %}
+        <span class="btn btn-peq paleta-btn" aria-current="true">✓ Em uso</span>
+      {% else %}
+        <button class="btn btn-peq paleta-btn">Usar esta</button>
+      {% endif %}
+    </form>
+    {% endfor %}
+  </div>
+  <p class="fraco" style="margin-top:18px">
+    A paleta muda botões, destaques, anel e gráficos gerais. As cores dos seus cartões e categorias continuam as que você escolheu em cada um.
+    A escolha fica salva na sua conta, então vale no computador e no celular.
+  </p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const raiz = document.documentElement;
+  const original = raiz.dataset.paleta;
+  document.querySelectorAll(".paleta").forEach((el) => {
+    const previa = () => { raiz.dataset.paleta = el.dataset.paleta; };
+    const voltar = () => { raiz.dataset.paleta = original; };
+    el.addEventListener("mouseenter", previa);
+    el.addEventListener("focusin", previa);
+    el.addEventListener("mouseleave", voltar);
+    el.addEventListener("focusout", voltar);
+  });
+  document.getElementById("alternar-tema-2").addEventListener("click", () => document.getElementById("alternar-tema").click());
+})();
+</script>
+{% endblock %}

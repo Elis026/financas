@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block conteudo %}
+<section class="card" style="max-width: 720px; margin: 0 auto">
+  <div class="card-topo"><h1>{{ titulo }}</h1></div>
+  {% if ajuda %}<p class="muted">{{ ajuda }}</p>{% endif %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="form-grade">
+      {% for campo in form %}
+        {% include "financas/_campo.html" with campo=campo largo=False %}
+      {% endfor %}
+    </div>
+    <div class="acoes" style="margin-top:24px">
+      <button class="btn btn-primaria" type="submit">Salvar</button>
+      <a class="btn" href="{% url voltar_url %}">Cancelar</a>
+      {% if excluir_url %}<a class="btn" style="margin-left:auto;color:var(--vermelho)" href="{{ excluir_url }}">Excluir</a>{% endif %}
+    </div>
+  </form>
+</section>
+{% endblock %}

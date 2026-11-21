@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load dinheiro %}
+{% block titulo %}Fixas e parceladas{% endblock %}
+
+{% block conteudo %}
+<div class="grade" style="grid-template-columns: minmax(0, 1fr)">
+<section class="card">
+  <div class="card-topo">
+    <div>
+      <h1>Contas recorrentes</h1>
+      <p class="muted" style="margin:4px 0 0">Total fixo por mês (despesas ativas): <strong class="num">{{ total_fixo|brl }}</strong></p>
+    </div>
+    <a class="btn btn-primaria" href="{% url 'lancamento_novo' %}?forma=RECORRENTE&tipo=DESPESA&natureza=FIXA">+ Conta recorrente</a>
+  </div>
+  <div class="tabela-wrap">
+  <table class="tabela">
+    <thead><tr><th>Descrição</th><th>Tipo</th><th>Categoria</th><th>Cartão</th><th>Dia</th><th>Período</th><th class="direita">Valor</th><th></th></tr></thead>
+    <tbody>
+    {% for r in recorrencias %}
+      <tr {% if not r.ativa %}style="opacity:.55"{% endif %}>
+        <td style="font-weight:500">{{ r.descricao }}{% if not r.ativa %} <span class="selo">encerrada</span>{% endif %}</td>
+        <td>{% if r.tipo == "RECEITA" %}<span class="selo receita">Receita</span>{% else %}<span class="selo {% if r.natureza == 'FIXA' %}fixa{% else %}variavel{% endif %}">{{ r.get_natureza_display }}</span>{% endif %}</td>
+        <td>{{ r.categoria.nome|default:"—" }}</td>
+        <td>{{ r.cartao.nome|default:"Dinheiro/Pix" }}</td>
+        <td>{{ r.inicio|date:"d" }}</td>
+        <td class="num">{{ r.inicio|date:"m/Y" }} → {% if r.fim %}{{ r.fim|date:"m/Y" }}{% else %}sem fim{% endif %}</td>
+        <td class="direita num">{{ r.valor|brl }}</td>
+        <td class="direita"><a class="btn btn-peq" href="{% url 'recorrencia_editar' r.pk %}">Editar</a></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="8" class="vazio">Nenhuma conta recorrente. Aluguel, internet, salário e assinaturas são bons candidatos.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-topo">
+    <h1>Compras parceladas em aberto</h1>
+    <a class="btn" href="{% url 'lancamento_novo' %}?forma=PARCELADA&tipo=DESPESA&natureza=VARIAVEL">+ Compra parcelada</a>
+  </div>
+  <div class="tabela-wrap">
+  <table class="tabela">
+    <thead><tr><th>Descrição</th><th>Cartão</th><th>Próxima parcela</th><th>Restam</th><th class="direita">Valor restante</th><th></th></tr></thead>
+    <tbody>
+    {% for g in parcelamentos %}
+      {% with p=g.primeira %}
+      <tr>
+        <td style="font-weight:500">{{ p.descricao }}</td>
+        <td>{{ p.cartao.nome|default:"Dinheiro/Pix" }}</td>
+        <td class="num">{{ p.rotulo_parcela }} · {{ p.competencia|date:"m/Y" }} · {{ p.valor|brl }}</td>
+        <td>{{ g.restantes }}</td>
+        <td class="direita num">{{ g.valor_restante|brl }}</td>
+        <td class="direita"><a class="btn btn-peq" href="{% url 'lancamento_excluir' p.pk %}?next=/recorrencias/">Quitar / excluir</a></td>
+      </tr>
+      {% endwith %}
+    {% empty %}
+      <tr><td colspan="6" class="vazio">Nenhuma compra parcelada em aberto.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+</div>
+{% endblock %}

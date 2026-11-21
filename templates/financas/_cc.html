@@ -1,0 +1,9 @@
+{% load dinheiro %}{% if geral %}<a href="{% qs cartao='' %}" class="cc todos {% if frente %}frente{% endif %}" style="--cc-cor:#2B2B31; --cc-texto:#FFFFFF" title="Visão geral de todos os cartões">
+  <div class="cc-linha"><span class="cc-nome">Visão geral</span><span class="cc-mini num">{{ total|brl }}</span></div>
+  <div class="cc-corpo"><div class="cc-rotulo">Despesas do mês</div><div class="cc-valor num">{{ total|brl }}</div></div>
+  <div class="cc-linha"><span>Todos os cartões</span></div>
+</a>{% else %}<a href="{% qs cartao=g.cartao.pk %}" class="cc {% if frente %}frente{% endif %}" style="--cc-cor: {{ g.cartao.cor }}; --cc-texto: {{ g.cartao.cor_texto }}" title="Ver dashboard do {{ g.cartao.nome }}">
+  <div class="cc-linha"><span class="cc-nome">{{ g.cartao.nome }}</span><span class="cc-mini num">{{ g.total|brl }}</span><span class="cc-chip"></span></div>
+  <div class="cc-corpo"><div class="cc-num">•••• {{ g.cartao.final|default:"----" }}</div><div class="cc-valor num">{{ g.total|brl }}</div></div>
+  <div class="cc-linha"><span>{{ g.cartao.get_tipo_display }}</span><strong>{{ g.cartao.bandeira|upper }}</strong></div>
+</a>{% endif %}

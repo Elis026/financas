@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load dinheiro %}
+{% block titulo %}Excluir lançamento{% endblock %}
+{% block conteudo %}
+<section class="card" style="max-width: 560px; margin: 0 auto">
+  <h1>Excluir “{{ lanc.descricao }}”?</h1>
+  <p class="muted">{{ lanc.valor|brl }} · {{ lanc.data|date:"d/m/Y" }}{% if lanc.rotulo_parcela %} · parcela {{ lanc.rotulo_parcela }}{% endif %}</p>
+  <form method="post">{% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.GET.next }}">
+    {% if lanc.grupo %}
+      <div class="campo" style="gap:10px;margin:16px 0">
+        <label class="campo-check"><input class="check" type="radio" name="escopo" value="este" checked> Só esta parcela</label>
+        <label class="campo-check"><input class="check" type="radio" name="escopo" value="proximos"> Esta e as próximas parcelas</label>
+        <label class="campo-check"><input class="check" type="radio" name="escopo" value="grupo"> Todas as {{ lanc.parcela_total }} parcelas</label>
+      </div>
+    {% elif lanc.recorrencia_id %}
+      <div class="campo" style="gap:10px;margin:16px 0">
+        <label class="campo-check"><input class="check" type="radio" name="escopo" value="este" checked> Só este mês</label>
+        <label class="campo-check"><input class="check" type="radio" name="escopo" value="recorrencia"> Este mês e encerrar a recorrência</label>
+      </div>
+    {% endif %}
+    <div class="acoes">
+      <button class="btn btn-perigo">Excluir</button>
+      <a class="btn" href="{{ request.GET.next|default:'/lancamentos/' }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
